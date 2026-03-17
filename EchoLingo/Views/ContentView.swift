@@ -11,6 +11,7 @@ struct ContentView: View {
                     controlsCard
                     captionCard(title: "Live Caption", text: viewModel.captionText)
                     captionCard(title: "Translated Text", text: viewModel.translationText)
+                    actionButtons
                     historyCard
                 }
                 .padding()
@@ -32,7 +33,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Real-time captions + translation")
                 .font(.title2.bold())
-            Text("V1 goal: live speech recognition, translated text, and reusable transcript history.")
+            Text("Phase 2 adds provider-ready translation, transcript history, and basic session actions.")
                 .foregroundStyle(.secondary)
         }
         .padding()
@@ -43,6 +44,13 @@ struct ContentView: View {
 
     private var controlsCard: some View {
         VStack(alignment: .leading, spacing: 16) {
+            Picker("Provider", selection: $viewModel.translationProvider) {
+                ForEach(TranslationProvider.allCases) { provider in
+                    Text(provider.displayName).tag(provider)
+                }
+            }
+            .pickerStyle(.segmented)
+
             Picker("Source", selection: $viewModel.sourceLanguage) {
                 Text("English").tag("en-US")
                 Text("Chinese").tag("zh-CN")
@@ -83,6 +91,20 @@ struct ContentView: View {
                 .padding()
                 .background(Color.gray.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    private var actionButtons: some View {
+        HStack(spacing: 12) {
+            Button("Clear Session", role: .destructive) {
+                viewModel.clearSession()
+            }
+            .buttonStyle(.bordered)
+
+            Button("Copy Transcript") {
+                viewModel.copyTranscript()
+            }
+            .buttonStyle(.borderedProminent)
         }
     }
 
