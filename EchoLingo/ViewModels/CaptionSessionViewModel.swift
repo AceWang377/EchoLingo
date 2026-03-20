@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import UIKit
 
@@ -15,14 +16,31 @@ final class CaptionSessionViewModel: ObservableObject {
     private let speechService: SpeechRecognitionService
     private let translationService: TranslationProviding
     private var latestStableCaption = ""
+    private var currentPartialCaption = ""
     private var translationTask: Task<Void, Never>?
 
     init(
-        speechService: SpeechRecognitionService = SpeechRecognitionService(),
-        translationService: TranslationProviding = TranslationService()
+        speechService: SpeechRecognitionService,
+        translationService: TranslationProviding
     ) {
         self.speechService = speechService
         self.translationService = translationService
+    }
+
+    convenience init() {
+        self.init(
+            speechService: SpeechRecognitionService(),
+            translationService: TranslationService()
+        )
+    }
+
+    var transcriptExportText: String {
+        transcriptHistory
+            .reversed()
+            .map {
+                "[\($0.timestamp.formatted(date: .omitted, time: .shortened))]\nOriginal: \($0.sourceText)\nTranslated: \($0.translatedText)"
+            }
+            .joined(separator: "\n\n")
     }
 
     func toggleListening() {
@@ -45,6 +63,7 @@ final class CaptionSessionViewModel: ObservableObject {
             isListening = true
             captionText = "Listening..."
             translationText = "Waiting for translated text..."
+            currentPartialCaption = ""
         } catch {
             errorMessage = error.localizedDescription
             isListening = false
@@ -54,7 +73,9 @@ final class CaptionSessionViewModel: ObservableObject {
     func stopListening() {
         speechService.stopRecognition()
         translationTask?.cancel()
+        translationTask = nil
         isListening = false
+        currentPartialCaption = ""
     }
 
     func clearSession() {
@@ -63,21 +84,23 @@ final class CaptionSessionViewModel: ObservableObject {
         translationText = "Translation will appear here"
         transcriptHistory.removeAll()
         latestStableCaption = ""
+        currentPartialCaption = ""
         errorMessage = nil
     }
 
     func copyTranscript() {
-        let text = transcriptHistory
-            .reversed()
-            .map { "Original: \($0.sourceText)\nTranslated: \($0.translatedText)" }
-            .joined(separator: "\n\n")
-        UIPasteboard.general.string = text
+        UIPasteboard.general.string = transcriptExportText
     }
 
     private func handleRecognition(text: String, isFinal: Bool) async {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = normalize(text)
         guard !trimmed.isEmpty else { return }
 
+        if !isFinal, trimmed == currentPartialCaption {
+            return
+        }
+
+        currentPartialCaption = trimmed
         captionText = trimmed
         scheduleTranslation(for: trimmed, isFinal: isFinal)
     }
@@ -99,20 +122,53 @@ final class CaptionSessionViewModel: ObservableObject {
             guard !Task.isCancelled else { return }
             translationText = translated
 
-            if isFinal && text != latestStableCaption {
-                latestStableCaption = text
-                transcriptHistory.insert(
-                    TranscriptSegment(
-                        sourceText: text,
-                        translatedText: translated,
-                        timestamp: Date(),
-                        isFinal: true
-                    ),
-                    at: 0
-                )
-            }
+            guard isFinal else { return }
+
+            let normalizedText = normalize(text)
+            guard normalizedText != latestStableCaption else { return }
+
+            latestStableCaption = normalizedText
+            currentPartialCaption = ""
+            appendOrMergeSegment(sourceText: normalizedText, translatedText: translated)
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func appendOrMergeSegment(sourceText: String, translatedText: String) {
+        if let first = transcriptHistory.first,
+           shouldMerge(sourceText: sourceText, with: first.sourceText) {
+            transcriptHistory[0] = TranscriptSegment(
+                id: first.id,
+                sourceText: sourceText,
+                translatedText: translatedText,
+                timestamp: Date(),
+                isFinal: true
+            )
+            return
+        }
+
+        transcriptHistory.insert(
+            TranscriptSegment(
+                sourceText: sourceText,
+                translatedText: translatedText,
+                timestamp: Date(),
+                isFinal: true
+            ),
+            at: 0
+        )
+    }
+
+    private func shouldMerge(sourceText: String, with existingText: String) -> Bool {
+        let newText = normalize(sourceText)
+        let oldText = normalize(existingText)
+        return newText.hasPrefix(oldText) || oldText.hasPrefix(newText)
+    }
+
+    private func normalize(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "  +", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
