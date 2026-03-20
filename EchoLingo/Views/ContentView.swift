@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var viewModel = CaptionSessionViewModel()
+    @State private var isExportingTranscript = false
 
     var body: some View {
         NavigationStack {
@@ -37,7 +38,26 @@ struct ContentView: View {
             } message: {
                 Text(viewModel.errorMessage ?? "Unknown error")
             }
+            .fileExporter(
+                isPresented: $isExportingTranscript,
+                document: TranscriptDocument(text: viewModel.transcriptExportText),
+                contentType: .plainText,
+                defaultFilename: exportFileName
+            ) { result in
+                switch result {
+                case .success:
+                    break
+                case .failure(let error):
+                    viewModel.errorMessage = error.localizedDescription
+                }
+            }
         }
+    }
+
+    private var exportFileName: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd-HH-mm"
+        return "EchoLingo-Transcript-\(formatter.string(from: Date()))"
     }
 
     private var heroSection: some View {
@@ -218,24 +238,56 @@ struct ContentView: View {
     }
 
     private var actionButtons: some View {
-        HStack(spacing: 12) {
-            Button("Clear Session", role: .destructive) {
-                viewModel.clearSession()
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(Color.red.opacity(0.10))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                Button("Clear Session", role: .destructive) {
+                    viewModel.clearSession()
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color.red.opacity(0.10))
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
-            Button("Copy Transcript") {
-                viewModel.copyTranscript()
+                Button("Copy Transcript") {
+                    viewModel.copyTranscript()
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color.blue.opacity(0.10))
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(Color.blue.opacity(0.10))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+            HStack(spacing: 12) {
+                ShareLink(
+                    item: viewModel.transcriptExportText,
+                    subject: Text("EchoLingo Transcript"),
+                    message: Text("Shared from EchoLingo")
+                ) {
+                    labelButton(title: "Share Transcript", systemImage: "square.and.arrow.up")
+                }
+                .disabled(viewModel.transcriptHistory.isEmpty)
+
+                Button {
+                    isExportingTranscript = true
+                } label: {
+                    labelButton(title: "Export .txt", systemImage: "doc.text")
+                }
+                .disabled(viewModel.transcriptHistory.isEmpty)
+            }
         }
         .buttonStyle(.plain)
+    }
+
+    private func labelButton(title: String, systemImage: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+            Text(title)
+                .fontWeight(.semibold)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(Color.gray.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var historySection: some View {
