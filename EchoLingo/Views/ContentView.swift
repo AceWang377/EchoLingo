@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var viewModel = CaptionSessionViewModel()
     @State private var isExportingTranscript = false
+    @State private var isShowingSettings = false
 
     var body: some View {
         NavigationStack {
@@ -29,6 +30,22 @@ struct ContentView: View {
             }
             .navigationTitle("EchoLingo")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        isShowingSettings = true
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                    }
+                }
+            }
+            .sheet(isPresented: $isShowingSettings) {
+                SettingsView(
+                    sourceLanguage: $viewModel.sourceLanguage,
+                    targetLanguage: $viewModel.targetLanguage,
+                    translationProvider: $viewModel.translationProvider
+                )
+            }
             .alert("Something went wrong", isPresented: Binding(get: {
                 viewModel.errorMessage != nil
             }, set: { newValue in
