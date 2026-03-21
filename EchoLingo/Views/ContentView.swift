@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @StateObject private var viewModel = CaptionSessionViewModel()
@@ -18,6 +19,9 @@ struct ContentView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         heroSection
+                        if let guidance = viewModel.permissionGuidance {
+                            permissionCard(text: guidance)
+                        }
                         controlPanel
                         livePanels
                         actionButtons
@@ -91,7 +95,6 @@ struct ContentView: View {
                 }
 
                 Spacer(minLength: 12)
-
                 statusPill
             }
 
@@ -125,6 +128,28 @@ struct ContentView: View {
         .padding(.vertical, 8)
         .background(viewModel.isListening ? Color.red.opacity(0.12) : Color.green.opacity(0.12))
         .clipShape(Capsule())
+    }
+
+    private func permissionCard(text: String) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.shield.fill")
+                    .foregroundStyle(.orange)
+                Text("Permission help")
+                    .font(.headline)
+            }
+
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            Button("Open Settings") {
+                viewModel.openSystemSettings()
+            }
+            .font(.subheadline.weight(.semibold))
+        }
+        .padding(18)
+        .background(cardBackground)
     }
 
     private func metricPill(title: String, value: String) -> some View {
@@ -207,19 +232,8 @@ struct ContentView: View {
 
     private var livePanels: some View {
         VStack(spacing: 16) {
-            scrollableTextCard(
-                title: "Live Caption",
-                subtitle: "Incoming speech recognition output",
-                text: viewModel.captionText,
-                accent: .blue
-            )
-
-            scrollableTextCard(
-                title: "Translated Text",
-                subtitle: "Current translated output",
-                text: viewModel.translationText,
-                accent: .purple
-            )
+            scrollableTextCard(title: "Live Caption", subtitle: "Incoming speech recognition output", text: viewModel.captionText, accent: .blue)
+            scrollableTextCard(title: "Translated Text", subtitle: "Current translated output", text: viewModel.translationText, accent: .purple)
         }
     }
 
@@ -257,36 +271,26 @@ struct ContentView: View {
     private var actionButtons: some View {
         VStack(spacing: 12) {
             HStack(spacing: 12) {
-                Button("Clear Session", role: .destructive) {
-                    viewModel.clearSession()
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(Color.red.opacity(0.10))
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                Button("Clear Session", role: .destructive) { viewModel.clearSession() }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.red.opacity(0.10))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
-                Button("Copy Transcript") {
-                    viewModel.copyTranscript()
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(Color.blue.opacity(0.10))
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                Button("Copy Transcript") { viewModel.copyTranscript() }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.blue.opacity(0.10))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
 
             HStack(spacing: 12) {
-                ShareLink(
-                    item: viewModel.transcriptExportText,
-                    subject: Text("EchoLingo Transcript"),
-                    message: Text("Shared from EchoLingo")
-                ) {
+                ShareLink(item: viewModel.transcriptExportText, subject: Text("EchoLingo Transcript"), message: Text("Shared from EchoLingo")) {
                     labelButton(title: "Share Transcript", systemImage: "square.and.arrow.up")
                 }
                 .disabled(viewModel.transcriptHistory.isEmpty)
 
-                Button {
-                    isExportingTranscript = true
-                } label: {
+                Button { isExportingTranscript = true } label: {
                     labelButton(title: "Export .txt", systemImage: "doc.text")
                 }
                 .disabled(viewModel.transcriptHistory.isEmpty)
@@ -298,8 +302,7 @@ struct ContentView: View {
     private func labelButton(title: String, systemImage: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: systemImage)
-            Text(title)
-                .fontWeight(.semibold)
+            Text(title).fontWeight(.semibold)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
@@ -335,11 +338,9 @@ struct ContentView: View {
                             Text(segment.sourceText)
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.primary)
-
                             Text(segment.translatedText)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
-
                             Text(segment.timestamp.formatted(date: .omitted, time: .shortened))
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
@@ -385,8 +386,4 @@ struct ContentView: View {
         default: return code
         }
     }
-}
-
-#Preview {
-    ContentView()
 }

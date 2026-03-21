@@ -12,6 +12,7 @@ final class CaptionSessionViewModel: ObservableObject {
     @Published var sourceLanguage = "en-US"
     @Published var targetLanguage = "zh-CN"
     @Published var translationProvider: TranslationProvider = .mock
+    @Published var permissionGuidance: String?
 
     private let speechService: SpeechRecognitionService
     private let translationService: TranslationProviding
@@ -53,6 +54,7 @@ final class CaptionSessionViewModel: ObservableObject {
 
     func startListening() async {
         errorMessage = nil
+        permissionGuidance = nil
 
         do {
             try await speechService.requestPermissions()
@@ -65,8 +67,9 @@ final class CaptionSessionViewModel: ObservableObject {
             translationText = "Waiting for translated text..."
             currentPartialCaption = ""
         } catch {
-            errorMessage = error.localizedDescription
             isListening = false
+            errorMessage = error.localizedDescription
+            permissionGuidance = guidance(for: error)
         }
     }
 
@@ -86,10 +89,16 @@ final class CaptionSessionViewModel: ObservableObject {
         latestStableCaption = ""
         currentPartialCaption = ""
         errorMessage = nil
+        permissionGuidance = nil
     }
 
     func copyTranscript() {
         UIPasteboard.general.string = transcriptExportText
+    }
+
+    func openSystemSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 
     private func handleRecognition(text: String, isFinal: Bool) async {
@@ -170,5 +179,16 @@ final class CaptionSessionViewModel: ObservableObject {
             .replacingOccurrences(of: "\n", with: " ")
             .replacingOccurrences(of: "  +", with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func guidance(for error: Error) -> String? {
+        let message = error.localizedDescription.lowercased()
+        if message.contains("settings") || message.contains("permission") || message.contains("microphone") || message.contains("speech recognition") {
+            return "Open iPhone Settings → EchoLingo, then enable Microphone and Speech Recognition. After that, reopen the app and try again."
+        }
+        if message.contains("real device") || message.contains("iphone") || message.contains("ipad") {
+            return "Run EchoLingo on a real iPhone or iPad. The simulator cannot provide a proper microphone flow for this feature."
+        }
+        return nil
     }
 }
