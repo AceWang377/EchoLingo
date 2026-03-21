@@ -1,17 +1,32 @@
-//
-//  EchoLingoApp.swift
-//  EchoLingo
-//
-//  Created by 王子轩的MACBOOK on 09/03/2026.
-//
-
 import SwiftUI
 
 @main
 struct EchoLingoApp: App {
+    @StateObject private var launchViewModel = AppLaunchViewModel()
+    @State private var showSplash = true
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            Group {
+                if showSplash {
+                    LaunchSplashView()
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                                withAnimation(.easeInOut(duration: 0.5)) {
+                                    showSplash = false
+                                }
+                            }
+                        }
+                } else if !launchViewModel.hasCompletedOnboarding {
+                    OnboardingView {
+                        launchViewModel.completeOnboarding()
+                    }
+                    .transition(.opacity)
+                } else {
+                    ContentView()
+                        .transition(.opacity)
+                }
+            }
         }
     }
 }
