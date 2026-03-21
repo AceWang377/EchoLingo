@@ -8,6 +8,7 @@ enum TranslationError: LocalizedError {
     case invalidURL
     case invalidResponse
     case missingAPIKey
+    case providerNotReady
 
     var errorDescription: String? {
         switch self {
@@ -17,6 +18,8 @@ enum TranslationError: LocalizedError {
             return "Translation service returned an invalid response."
         case .missingAPIKey:
             return "Translation API key is missing."
+        case .providerNotReady:
+            return "This translation provider is not connected yet. Use Mock or LibreTranslate for now."
         }
     }
 }
@@ -28,9 +31,24 @@ struct TranslationService: TranslationProviding {
 
         switch provider {
         case .mock:
-            return "[\(targetLanguage.uppercased())] \(trimmed)"
+            return mockTranslate(trimmed, to: targetLanguage)
         case .libreTranslate:
             return try await translateWithLibreTranslate(trimmed, from: sourceLanguage, to: targetLanguage)
+        case .googleCloudPlaceholder:
+            throw TranslationError.providerNotReady
+        }
+    }
+
+    private func mockTranslate(_ text: String, to targetLanguage: String) -> String {
+        switch targetLanguage {
+        case "zh-CN":
+            return "[中文示例] \(text)"
+        case "en-US":
+            return "[English mock] \(text)"
+        case "es-ES":
+            return "[Español simulado] \(text)"
+        default:
+            return "[\(targetLanguage.uppercased())] \(text)"
         }
     }
 

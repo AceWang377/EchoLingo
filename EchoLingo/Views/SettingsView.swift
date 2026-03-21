@@ -45,12 +45,18 @@ struct SettingsView: View {
                 Text("Spanish").tag("es-ES")
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Current setup")
+            VStack(alignment: .leading, spacing: 8) {
+                Text(translationProvider.displayName)
                     .font(.subheadline.weight(.semibold))
-                Text("Use Mock for development and UI testing. Switch to a real provider later when the MVP flow is fully stable.")
+                Text(translationProvider.statusDescription)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+
+                if !translationProvider.isProductionReady {
+                    Label("Not production-ready yet", systemImage: "exclamationmark.triangle.fill")
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                }
             }
             .padding(.vertical, 4)
         }
@@ -85,7 +91,7 @@ struct SettingsView: View {
         Section("Launch Readiness") {
             Label("Speech recognition and transcript export are already implemented", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.green)
-            Label("A real translation provider still needs to be connected", systemImage: "clock.badge.exclamationmark")
+            Label("A real production translation provider still needs to be connected", systemImage: "clock.badge.exclamationmark")
                 .foregroundStyle(.orange)
             Label("Replace placeholder privacy/support links before release", systemImage: "link.badge.plus")
                 .foregroundStyle(.orange)
