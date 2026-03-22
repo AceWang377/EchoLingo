@@ -69,6 +69,8 @@ final class AuthViewModel: ObservableObject {
             UserDefaults.standard.removeObject(forKey: userDefaultsKey)
             errorMessage = nil
             successMessage = nil
+            email = ""
+            password = ""
         } catch {
             errorMessage = error.localizedDescription
         }
