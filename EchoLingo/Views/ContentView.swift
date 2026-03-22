@@ -2,11 +2,15 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var viewModel: CaptionSessionViewModel
+    @ObservedObject var authViewModel: AuthViewModel
     @State private var isShowingSettings = false
+    let onSignedOut: () -> Void
     let onOpenSessionsTab: () -> Void
 
-    init(sessionStore: TranscriptSessionStore = .shared, onOpenSessionsTab: @escaping () -> Void = {}) {
+    init(sessionStore: TranscriptSessionStore = .shared, authViewModel: AuthViewModel = .shared, onSignedOut: @escaping () -> Void = {}, onOpenSessionsTab: @escaping () -> Void = {}) {
         _viewModel = StateObject(wrappedValue: CaptionSessionViewModel(sessionStore: sessionStore))
+        self._authViewModel = ObservedObject(wrappedValue: authViewModel)
+        self.onSignedOut = onSignedOut
         self.onOpenSessionsTab = onOpenSessionsTab
     }
 
@@ -69,7 +73,9 @@ struct ContentView: View {
                 SettingsView(
                     sourceLanguage: $viewModel.sourceLanguage,
                     targetLanguage: $viewModel.targetLanguage,
-                    translationProvider: $viewModel.translationProvider
+                    translationProvider: $viewModel.translationProvider,
+                    authViewModel: authViewModel,
+                    onSignedOut: onSignedOut
                 )
             }
             .onAppear {

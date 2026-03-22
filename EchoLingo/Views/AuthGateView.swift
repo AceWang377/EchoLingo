@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AuthGateView: View {
-    @StateObject private var authViewModel = AuthViewModel()
+    @StateObject private var authViewModel = AuthViewModel.shared
 
     var body: some View {
         NavigationStack {
@@ -84,7 +84,7 @@ struct AuthGateView: View {
                     .disabled(authViewModel.isLoading)
 
                     NavigationLink {
-                        RootTabView()
+                        RootTabView(authViewModel: authViewModel)
                     } label: {
                         Text("Continue as Guest")
                             .frame(maxWidth: .infinity)
@@ -99,7 +99,10 @@ struct AuthGateView: View {
             .padding(20)
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationDestination(isPresented: .constant(authViewModel.isSignedIn)) {
-                RootTabView()
+                RootTabView(authViewModel: authViewModel, onSignedOut: {
+                    authViewModel.email = ""
+                    authViewModel.password = ""
+                })
             }
             .onOpenURL { url in
                 authViewModel.handleIncomingURL(url)

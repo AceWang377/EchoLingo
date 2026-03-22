@@ -4,11 +4,14 @@ struct SettingsView: View {
     @Binding var sourceLanguage: String
     @Binding var targetLanguage: String
     @Binding var translationProvider: TranslationProvider
+    @ObservedObject var authViewModel: AuthViewModel
+    let onSignedOut: () -> Void
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             Form {
+                accountSection
                 translationSection
                 appSection
                 supportSection
@@ -22,6 +25,43 @@ struct SettingsView: View {
                         dismiss()
                     }
                 }
+            }
+        }
+    }
+
+    private var accountSection: some View {
+        Section("Account") {
+            HStack(spacing: 14) {
+                Circle()
+                    .fill(Color.blue.opacity(0.15))
+                    .frame(width: 52, height: 52)
+                    .overlay(
+                        Text(initials)
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(.blue)
+                    )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(authViewModel.currentUser?.email ?? "Guest")
+                        .font(.headline)
+                    Text(authViewModel.isSignedIn ? "Signed in" : "Guest mode")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.vertical, 4)
+
+            if authViewModel.isSignedIn {
+                Button("Log Out", role: .destructive) {
+                    Task {
+                        await authViewModel.signOut()
+                        onSignedOut()
+                    }
+                }
+            } else {
+                Text("Sign in from the auth screen to unlock account-based features later.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -67,15 +107,9 @@ struct SettingsView: View {
             LabeledContent("App", value: AppMetadata.appName)
             LabeledContent("Version", value: AppMetadata.version)
             LabeledContent("Goal", value: AppMetadata.buildGoal)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Product direction")
-                    .font(.subheadline.weight(.semibold))
-                Text("EchoLingo is being built as a real-time speech caption and translation app designed for conversations, study, and travel scenarios.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.vertical, 4)
+            Text("EchoLingo is being built for work and study scenarios where users need live captions, translation, and reusable notes.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -91,13 +125,20 @@ struct SettingsView: View {
         Section("Launch Readiness") {
             Label("Speech recognition and transcript export are already implemented", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.green)
-            Label("A real production translation provider still needs to be connected", systemImage: "clock.badge.exclamationmark")
+            Label("Auth is working in optional-login mode", systemImage: "person.crop.circle.badge.checkmark")
+                .foregroundStyle(.green)
+            Label("Local sessions are temporarily scoped by user on this device", systemImage: "externaldrive.badge.person.crop")
                 .foregroundStyle(.orange)
-            Label("Replace placeholder privacy/support links before release", systemImage: "link.badge.plus")
-                .foregroundStyle(.orange)
-            Label("Add final app icon, screenshots, and App Store metadata", systemImage: "photo.on.rectangle")
+            Label("Real cloud session sync should be added later", systemImage: "icloud.slash")
                 .foregroundStyle(.secondary)
         }
+    }
+
+    private var initials: String {
+        if let email = authViewModel.currentUser?.email, let first = email.first {
+            return String(first).uppercased()
+        }
+        return "G"
     }
 }
 
@@ -105,6 +146,8 @@ struct SettingsView: View {
     SettingsView(
         sourceLanguage: .constant("en-US"),
         targetLanguage: .constant("zh-CN"),
-        translationProvider: .constant(.mock)
+        translationProvider: .constant(.mock),
+        authViewModel: .shared,
+        onSignedOut: {}
     )
 }

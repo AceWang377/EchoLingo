@@ -8,9 +8,15 @@ final class TranscriptSessionStore: ObservableObject {
     @Published private(set) var sessions: [SavedTranscriptSession] = []
     @Published var selectedSession: SavedTranscriptSession?
 
-    private let storageKey = "echolingo.saved.sessions"
+    private let storageKeyPrefix = "echolingo.saved.sessions"
+    private var currentOwnerKey = "guest"
 
     init() {
+        switchUser(to: AuthViewModel.shared.storageUserKey)
+    }
+
+    func switchUser(to ownerKey: String) {
+        currentOwnerKey = ownerKey
         load()
     }
 
@@ -46,15 +52,24 @@ final class TranscriptSessionStore: ObservableObject {
     }
 
     private func load() {
-        guard let data = UserDefaults.standard.data(forKey: storageKey) else { return }
+        guard let data = UserDefaults.standard.data(forKey: fullStorageKey) else {
+            sessions = []
+            return
+        }
         if let decoded = try? JSONDecoder().decode([SavedTranscriptSession].self, from: data) {
             sessions = decoded.sorted { $0.updatedAt > $1.updatedAt }
+        } else {
+            sessions = []
         }
     }
 
     private func persist() {
         if let encoded = try? JSONEncoder().encode(sessions) {
-            UserDefaults.standard.set(encoded, forKey: storageKey)
+            UserDefaults.standard.set(encoded, forKey: fullStorageKey)
         }
+    }
+
+    private var fullStorageKey: String {
+        "\(storageKeyPrefix).\(currentOwnerKey)"
     }
 }
