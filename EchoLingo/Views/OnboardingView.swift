@@ -7,22 +7,31 @@ struct OnboardingView: View {
         NavigationStack {
             ZStack {
                 LinearGradient(
-                    colors: [Color(.systemBackground), Color.blue.opacity(0.08), Color.purple.opacity(0.06)],
+                    colors: [Color(.systemBackground), Color.blue.opacity(0.06), Color.purple.opacity(0.05)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 .ignoresSafeArea()
 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 22) {
+                        VStack(alignment: .center, spacing: 14) {
+                            Image("EchoLingoLogo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(maxWidth: 220)
+                                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                                .shadow(color: .black.opacity(0.08), radius: 14, x: 0, y: 8)
+
                             Text("Welcome to EchoLingo")
-                                .font(.system(size: 34, weight: .bold, design: .rounded))
-                            Text("A real-time speech caption and translation app for conversations, study, and travel.")
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                            Text("A simple real-time speech caption and translation app for conversations, study, and travel.")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
                         }
-                        .padding(.top, 12)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 8)
 
                         onboardingCard(
                             title: "What EchoLingo does",
@@ -44,16 +53,6 @@ struct OnboardingView: View {
                             ]
                         )
 
-                        onboardingCard(
-                            title: "Good to know",
-                            icon: "sparkles",
-                            lines: [
-                                "For best results, test on a real iPhone or iPad.",
-                                "Transcript history can be copied, shared, and exported.",
-                                "You can change provider and languages in Settings later."
-                            ]
-                        )
-
                         Button(action: onContinue) {
                             HStack {
                                 Spacer()
@@ -72,7 +71,7 @@ struct OnboardingView: View {
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         }
-                        .padding(.top, 6)
+                        .padding(.top, 4)
                     }
                     .padding(20)
                 }
