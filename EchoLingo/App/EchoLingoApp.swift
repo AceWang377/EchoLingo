@@ -23,7 +23,7 @@ struct EchoLingoApp: App {
                     }
                     .transition(.opacity)
                 } else {
-                    ContentView()
+                    AuthGateView()
                         .transition(.opacity)
                 }
             }
