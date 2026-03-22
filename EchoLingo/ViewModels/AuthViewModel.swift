@@ -7,6 +7,7 @@ final class AuthViewModel: ObservableObject {
     @Published var password = ""
     @Published var errorMessage: String?
     @Published var isLoading = false
+    @Published var lastAuthCallbackURL: URL?
 
     private let authService: AuthProviding
 
@@ -40,6 +41,13 @@ final class AuthViewModel: ObservableObject {
             currentUser = nil
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    func handleIncomingURL(_ url: URL) {
+        lastAuthCallbackURL = url
+        if url.scheme == "echolingo" {
+            errorMessage = nil
         }
     }
 

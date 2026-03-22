@@ -46,6 +46,11 @@ struct AuthGateView: View {
                         .multilineTextAlignment(.center)
                 }
 
+                Text("For email confirmation redirects, set Supabase Site URL to any real public URL you control, and add redirect URL: echolingo://auth/callback")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
                 VStack(spacing: 12) {
                     Button {
                         Task { await authViewModel.signIn() }
@@ -88,6 +93,9 @@ struct AuthGateView: View {
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationDestination(isPresented: .constant(authViewModel.isSignedIn)) {
                 ContentView()
+            }
+            .onOpenURL { url in
+                authViewModel.handleIncomingURL(url)
             }
         }
     }
