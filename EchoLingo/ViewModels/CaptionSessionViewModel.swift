@@ -5,6 +5,7 @@ import UIKit
 @MainActor
 final class CaptionSessionViewModel: ObservableObject {
     @Published var isListening = false
+    @Published var isTranslating = false
     @Published var captionText = "Waiting for speech..."
     @Published var translationText = "Translation will appear here"
     @Published var errorMessage: String?
@@ -13,6 +14,7 @@ final class CaptionSessionViewModel: ObservableObject {
     @Published var targetLanguage = "zh-CN"
     @Published var translationProvider: TranslationProvider = .mock
     @Published var permissionGuidance: String?
+    @Published var translationGuidance: String?
 
     private let speechService: SpeechRecognitionService
     private let translationService: TranslationProviding
@@ -55,6 +57,7 @@ final class CaptionSessionViewModel: ObservableObject {
     func startListening() async {
         errorMessage = nil
         permissionGuidance = nil
+        translationGuidance = nil
 
         do {
             try await speechService.requestPermissions()
@@ -64,7 +67,7 @@ final class CaptionSessionViewModel: ObservableObject {
             }
             isListening = true
             captionText = "Listening..."
-            translationText = "Waiting for translated text..."
+            translationText = translationProvider == .mock ? "Mock translation ready" : "Waiting for translated text..."
             currentPartialCaption = ""
         } catch {
             isListening = false
@@ -78,6 +81,7 @@ final class CaptionSessionViewModel: ObservableObject {
         translationTask?.cancel()
         translationTask = nil
         isListening = false
+        isTranslating = false
         currentPartialCaption = ""
     }
 
@@ -90,6 +94,7 @@ final class CaptionSessionViewModel: ObservableObject {
         currentPartialCaption = ""
         errorMessage = nil
         permissionGuidance = nil
+        translationGuidance = nil
     }
 
     func copyTranscript() {
@@ -126,9 +131,16 @@ final class CaptionSessionViewModel: ObservableObject {
     }
 
     private func translateAndStore(text: String, isFinal: Bool) async {
+        isTranslating = true
+        if translationProvider != .mock {
+            translationText = "Translating..."
+        }
+
         do {
             let translated = try await translationService.translate(text, from: sourceLanguage, to: targetLanguage, provider: translationProvider)
             guard !Task.isCancelled else { return }
+            isTranslating = false
+            translationGuidance = nil
             translationText = translated
 
             guard isFinal else { return }
@@ -140,7 +152,14 @@ final class CaptionSessionViewModel: ObservableObject {
             currentPartialCaption = ""
             appendOrMergeSegment(sourceText: normalizedText, translatedText: translated)
         } catch {
+            guard !Task.isCancelled else { return }
+            isTranslating = false
             errorMessage = error.localizedDescription
+            translationGuidance = translationFallbackGuidance(for: error)
+
+            if translationProvider == .libreTranslate {
+                translationText = "Translation unavailable right now. Switch to Mock or try again later."
+            }
         }
     }
 
@@ -190,5 +209,16 @@ final class CaptionSessionViewModel: ObservableObject {
             return "Run EchoLingo on a real iPhone or iPad. The simulator cannot provide a proper microphone flow for this feature."
         }
         return nil
+    }
+
+    private func translationFallbackGuidance(for error: Error) -> String? {
+        let message = error.localizedDescription.lowercased()
+        if message.contains("timed out") || message.contains("temporarily unavailable") || message.contains("network") {
+            return "LibreTranslate public testing can be unstable. If this keeps happening, switch back to Mock in Settings and continue testing the rest of the app flow."
+        }
+        if message.contains("not connected yet") {
+            return "The selected provider is only a placeholder right now. Use Mock or LibreTranslate for this stage of the MVP."
+        }
+        return "If translation keeps failing, use Mock provider for demos and testing while we wire in a more stable production service."
     }
 }

@@ -22,6 +22,9 @@ struct ContentView: View {
                         if let guidance = viewModel.permissionGuidance {
                             permissionCard(text: guidance)
                         }
+                        if let translationGuidance = viewModel.translationGuidance {
+                            translationCard(text: translationGuidance)
+                        }
                         controlPanel
                         livePanels
                         actionButtons
@@ -119,14 +122,14 @@ struct ContentView: View {
     private var statusPill: some View {
         HStack(spacing: 8) {
             Circle()
-                .fill(viewModel.isListening ? Color.red : Color.green)
+                .fill(viewModel.isListening ? Color.red : (viewModel.isTranslating ? Color.orange : Color.green))
                 .frame(width: 10, height: 10)
-            Text(viewModel.isListening ? "Listening" : "Ready")
+            Text(viewModel.isListening ? (viewModel.isTranslating ? "Listening · Translating" : "Listening") : "Ready")
                 .font(.caption.weight(.semibold))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(viewModel.isListening ? Color.red.opacity(0.12) : Color.green.opacity(0.12))
+        .background(viewModel.isListening ? (viewModel.isTranslating ? Color.orange.opacity(0.14) : Color.red.opacity(0.12)) : Color.green.opacity(0.12))
         .clipShape(Capsule())
     }
 
@@ -147,6 +150,23 @@ struct ContentView: View {
                 viewModel.openSystemSettings()
             }
             .font(.subheadline.weight(.semibold))
+        }
+        .padding(18)
+        .background(cardBackground)
+    }
+
+    private func translationCard(text: String) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "network.badge.shield.half.filled")
+                    .foregroundStyle(.blue)
+                Text("Translation provider status")
+                    .font(.headline)
+            }
+
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
         .padding(18)
         .background(cardBackground)
@@ -233,7 +253,7 @@ struct ContentView: View {
     private var livePanels: some View {
         VStack(spacing: 16) {
             scrollableTextCard(title: "Live Caption", subtitle: "Incoming speech recognition output", text: viewModel.captionText, accent: .blue)
-            scrollableTextCard(title: "Translated Text", subtitle: "Current translated output", text: viewModel.translationText, accent: .purple)
+            scrollableTextCard(title: "Translated Text", subtitle: viewModel.isTranslating ? "Translation in progress" : "Current translated output", text: viewModel.translationText, accent: .purple)
         }
     }
 

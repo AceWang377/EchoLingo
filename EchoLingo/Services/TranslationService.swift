@@ -9,6 +9,9 @@ enum TranslationError: LocalizedError {
     case invalidResponse
     case missingAPIKey
     case providerNotReady
+    case networkUnavailable
+    case requestTimedOut
+    case serviceUnavailable
 
     var errorDescription: String? {
         switch self {
@@ -20,6 +23,12 @@ enum TranslationError: LocalizedError {
             return "Translation API key is missing."
         case .providerNotReady:
             return "This translation provider is not connected yet. Use Mock or LibreTranslate for now."
+        case .networkUnavailable:
+            return "Network connection appears unavailable. Please check your connection and try again."
+        case .requestTimedOut:
+            return "Translation request timed out. Try again or switch back to Mock mode."
+        case .serviceUnavailable:
+            return "The translation service is temporarily unavailable. Try again later or use Mock mode."
         }
     }
 }
@@ -60,6 +69,7 @@ struct TranslationService: TranslationProviding {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 8
 
         let payload = LibreTranslateRequest(
             q: text,
@@ -70,13 +80,37 @@ struct TranslationService: TranslationProviding {
         )
         request.httpBody = try JSONEncoder().encode(payload)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse, 200..<300 ~= httpResponse.statusCode else {
-            throw TranslationError.invalidResponse
-        }
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw TranslationError.invalidResponse
+            }
 
-        let decoded = try JSONDecoder().decode(LibreTranslateResponse.self, from: data)
-        return decoded.translatedText
+            switch httpResponse.statusCode {
+            case 200..<300:
+                let decoded = try JSONDecoder().decode(LibreTranslateResponse.self, from: data)
+                return decoded.translatedText
+            case 408:
+                throw TranslationError.requestTimedOut
+            case 429, 500...599:
+                throw TranslationError.serviceUnavailable
+            default:
+                throw TranslationError.invalidResponse
+            }
+        } catch let error as TranslationError {
+            throw error
+        } catch let error as URLError {
+            switch error.code {
+            case .timedOut:
+                throw TranslationError.requestTimedOut
+            case .notConnectedToInternet, .networkConnectionLost, .cannotFindHost, .cannotConnectToHost:
+                throw TranslationError.networkUnavailable
+            default:
+                throw TranslationError.serviceUnavailable
+            }
+        } catch {
+            throw TranslationError.serviceUnavailable
+        }
     }
 
     private func languageCode(from localeIdentifier: String) -> String {
