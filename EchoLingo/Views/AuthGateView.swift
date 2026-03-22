@@ -39,6 +39,13 @@ struct AuthGateView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
 
+                if let successMessage = authViewModel.successMessage {
+                    Text(successMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.green)
+                        .multilineTextAlignment(.center)
+                }
+
                 if let errorMessage = authViewModel.errorMessage {
                     Text(errorMessage)
                         .font(.footnote)
