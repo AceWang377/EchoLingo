@@ -15,6 +15,9 @@ final class CaptionSessionViewModel: ObservableObject {
     @Published var translationProvider: TranslationProvider = .mock
     @Published var permissionGuidance: String?
     @Published var translationGuidance: String?
+    @Published var focusModeEnabled = false
+
+    let sessionStore: TranscriptSessionStore
 
     private let speechService: SpeechRecognitionService
     private let translationService: TranslationProviding
@@ -24,16 +27,19 @@ final class CaptionSessionViewModel: ObservableObject {
 
     init(
         speechService: SpeechRecognitionService,
-        translationService: TranslationProviding
+        translationService: TranslationProviding,
+        sessionStore: TranscriptSessionStore
     ) {
         self.speechService = speechService
         self.translationService = translationService
+        self.sessionStore = sessionStore
     }
 
     convenience init() {
         self.init(
             speechService: SpeechRecognitionService(),
-            translationService: TranslationService()
+            translationService: TranslationService(),
+            sessionStore: TranscriptSessionStore()
         )
     }
 
@@ -52,6 +58,35 @@ final class CaptionSessionViewModel: ObservableObject {
         } else {
             Task { await startListening() }
         }
+    }
+
+    func toggleFocusMode() {
+        withAnimation(.spring(response: 0.36, dampingFraction: 0.9)) {
+            focusModeEnabled.toggle()
+        }
+    }
+
+    func saveCurrentSession() {
+        sessionStore.saveCurrentSession(
+            title: transcriptHistory.last?.sourceText,
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage,
+            transcriptHistory: transcriptHistory
+        )
+    }
+
+    func loadSession(_ session: SavedTranscriptSession) {
+        stopListening()
+        sourceLanguage = session.sourceLanguage
+        targetLanguage = session.targetLanguage
+        transcriptHistory = session.items.map { $0.toSegment() }.reversed()
+        captionText = transcriptHistory.last?.sourceText ?? "Waiting for speech..."
+        translationText = transcriptHistory.last?.translatedText ?? "Translation will appear here"
+        latestStableCaption = normalize(transcriptHistory.first?.sourceText ?? "")
+    }
+
+    func deleteSavedSession(_ session: SavedTranscriptSession) {
+        sessionStore.deleteSession(session)
     }
 
     func startListening() async {

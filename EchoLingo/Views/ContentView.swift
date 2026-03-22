@@ -13,7 +13,10 @@ struct ContentView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        headerSection
+                        if !viewModel.focusModeEnabled {
+                            headerSection
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                        }
 
                         if let guidance = viewModel.permissionGuidance {
                             infoCard(title: "Permission help", systemImage: "exclamationmark.shield.fill", tint: .orange, text: guidance, actionTitle: "Open Settings") {
@@ -26,11 +29,18 @@ struct ContentView: View {
                         }
 
                         listenCard
-                        translationSettingsCard
+
+                        if !viewModel.focusModeEnabled {
+                            translationSettingsCard
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+
                         contentPanels
                         actionButtons
                         historySection
+                        savedSessionsSection
                     }
+                    .animation(.spring(response: 0.35, dampingFraction: 0.9), value: viewModel.focusModeEnabled)
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
                     .padding(.bottom, 32)
@@ -39,7 +49,13 @@ struct ContentView: View {
             .navigationTitle("EchoLingo")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        viewModel.toggleFocusMode()
+                    } label: {
+                        Image(systemName: viewModel.focusModeEnabled ? "arrow.down.forward.and.arrow.up.backward" : "arrow.up.left.and.arrow.down.right")
+                    }
+
                     Button {
                         isShowingSettings = true
                     } label: {
@@ -125,8 +141,15 @@ struct ContentView: View {
 
     private var listenCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Main Action")
-                .font(.headline)
+            HStack {
+                Text("Main Action")
+                    .font(.headline)
+                Spacer()
+                Button(viewModel.focusModeEnabled ? "Exit Focus" : "Focus Mode") {
+                    viewModel.toggleFocusMode()
+                }
+                .font(.caption.weight(.semibold))
+            }
 
             Button(action: { viewModel.toggleListening() }) {
                 HStack(spacing: 14) {
@@ -162,6 +185,13 @@ struct ContentView: View {
                 .shadow(color: (viewModel.isListening ? Color.red : Color.blue).opacity(0.26), radius: 14, x: 0, y: 10)
             }
             .buttonStyle(.plain)
+
+            if !viewModel.transcriptHistory.isEmpty {
+                Button("Save Current Session") {
+                    viewModel.saveCurrentSession()
+                }
+                .font(.subheadline.weight(.semibold))
+            }
         }
         .padding(18)
         .background(cardBackground)
@@ -206,19 +236,8 @@ struct ContentView: View {
 
     private var contentPanels: some View {
         VStack(spacing: 14) {
-            scrollableTextCard(
-                title: "Live Caption",
-                subtitle: "Incoming speech recognition output",
-                text: viewModel.captionText,
-                accent: .blue
-            )
-
-            scrollableTextCard(
-                title: "Translated Text",
-                subtitle: viewModel.isTranslating ? "Translation in progress" : "Current translated output",
-                text: viewModel.translationText,
-                accent: .purple
-            )
+            scrollableTextCard(title: "Live Caption", subtitle: "Incoming speech recognition output", text: viewModel.captionText, accent: .blue)
+            scrollableTextCard(title: "Translated Text", subtitle: viewModel.isTranslating ? "Translation in progress" : "Current translated output", text: viewModel.translationText, accent: .purple)
         }
     }
 
@@ -274,18 +293,12 @@ struct ContentView: View {
             }
 
             HStack(spacing: 12) {
-                ShareLink(
-                    item: viewModel.transcriptExportText,
-                    subject: Text("EchoLingo Transcript"),
-                    message: Text("Shared from EchoLingo")
-                ) {
+                ShareLink(item: viewModel.transcriptExportText, subject: Text("EchoLingo Transcript"), message: Text("Shared from EchoLingo")) {
                     labelButton(title: "Share Transcript", systemImage: "square.and.arrow.up")
                 }
                 .disabled(viewModel.transcriptHistory.isEmpty)
 
-                Button {
-                    isExportingTranscript = true
-                } label: {
+                Button { isExportingTranscript = true } label: {
                     labelButton(title: "Export .txt", systemImage: "doc.text")
                 }
                 .disabled(viewModel.transcriptHistory.isEmpty)
@@ -343,6 +356,63 @@ struct ContentView: View {
                         }
                         .padding(16)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(cardBackground)
+                    }
+                }
+            }
+        }
+    }
+
+    private var savedSessionsSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("Saved Sessions")
+                    .font(.headline)
+                Spacer()
+                Text("\(viewModel.sessionStore.sessions.count)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if viewModel.sessionStore.sessions.isEmpty {
+                Text("No saved sessions yet. Save a session after recording to keep it locally on this device.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(18)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(cardBackground)
+            } else {
+                LazyVStack(spacing: 12) {
+                    ForEach(viewModel.sessionStore.sessions) { session in
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(session.title)
+                                        .font(.subheadline.weight(.semibold))
+                                    Text(session.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                            }
+
+                            Text("\(session.sourceLanguage) → \(session.targetLanguage) · \(session.items.count) segments")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                            HStack(spacing: 12) {
+                                Button("Load") {
+                                    viewModel.loadSession(session)
+                                }
+                                .font(.subheadline.weight(.semibold))
+
+                                Button("Delete", role: .destructive) {
+                                    viewModel.deleteSavedSession(session)
+                                }
+                                .font(.subheadline.weight(.semibold))
+                            }
+                        }
+                        .padding(16)
                         .background(cardBackground)
                     }
                 }
