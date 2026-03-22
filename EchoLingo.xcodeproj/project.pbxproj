@@ -399,8 +399,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = VSCD8CFQFQ;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = EchoLingo/Info.plist;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = \"com.ace.EchoLingo.auth\";\n    CFBundleURLSchemes =     (\n        echolingo\n    );\n}";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "EchoLingo needs microphone access to capture speech for live captions.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "EchoLingo needs speech recognition access to turn audio into real-time captions.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -434,8 +434,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = VSCD8CFQFQ;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = EchoLingo/Info.plist;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleTypeRole = Editor;\n    CFBundleURLName = \"com.ace.EchoLingo.auth\";\n    CFBundleURLSchemes =     (\n        echolingo\n    );\n}";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "EchoLingo needs microphone access to capture speech for live captions.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "EchoLingo needs speech recognition access to turn audio into real-time captions.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
