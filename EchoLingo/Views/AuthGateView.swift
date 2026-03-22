@@ -1,7 +1,11 @@
 import SwiftUI
 
 struct AuthGateView: View {
-    @StateObject private var authViewModel = AuthViewModel.shared
+    @StateObject private var authViewModel: AuthViewModel
+
+    init(authViewModel: AuthViewModel = .shared) {
+        _authViewModel = StateObject(wrappedValue: authViewModel)
+    }
 
     var body: some View {
         NavigationStack {

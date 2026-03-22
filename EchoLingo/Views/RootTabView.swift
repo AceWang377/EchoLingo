@@ -7,7 +7,7 @@ struct RootTabView: View {
     let onSignedOut: () -> Void
 
     init(authViewModel: AuthViewModel = .shared, onSignedOut: @escaping () -> Void = {}) {
-        self._authViewModel = ObservedObject(wrappedValue: authViewModel)
+        self.authViewModel = authViewModel
         self.onSignedOut = onSignedOut
     }
 

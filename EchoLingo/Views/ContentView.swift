@@ -7,9 +7,18 @@ struct ContentView: View {
     let onSignedOut: () -> Void
     let onOpenSessionsTab: () -> Void
 
-    init(sessionStore: TranscriptSessionStore = .shared, authViewModel: AuthViewModel = .shared, onSignedOut: @escaping () -> Void = {}, onOpenSessionsTab: @escaping () -> Void = {}) {
-        _viewModel = StateObject(wrappedValue: CaptionSessionViewModel(sessionStore: sessionStore))
-        self._authViewModel = ObservedObject(wrappedValue: authViewModel)
+    @MainActor
+    init(sessionStore: TranscriptSessionStore? = nil, authViewModel: AuthViewModel? = nil, onSignedOut: @escaping () -> Void = {}, onOpenSessionsTab: @escaping () -> Void = {}) {
+        let resolvedSessionStore = sessionStore ?? .shared
+        let resolvedAuthViewModel = authViewModel ?? .shared
+        _viewModel = StateObject(
+            wrappedValue: CaptionSessionViewModel(
+                speechService: SpeechRecognitionService(),
+                translationService: TranslationService(),
+                sessionStore: resolvedSessionStore
+            )
+        )
+        self._authViewModel = ObservedObject(wrappedValue: resolvedAuthViewModel)
         self.onSignedOut = onSignedOut
         self.onOpenSessionsTab = onOpenSessionsTab
     }
