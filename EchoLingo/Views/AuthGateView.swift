@@ -46,7 +46,7 @@ struct AuthGateView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                Text("For email confirmation redirects, set Supabase Site URL to any real public URL you control, and add redirect URL: echolingo://auth/callback")
+                Text("Signup emails should now use echolingo://auth/callback. In Supabase, keep Site URL as a real public URL and add echolingo://auth/callback to Redirect URLs.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

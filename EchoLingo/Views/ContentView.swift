@@ -1,9 +1,7 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct ContentView: View {
     @StateObject private var viewModel = CaptionSessionViewModel()
-    @State private var isExportingTranscript = false
     @State private var isShowingSettings = false
 
     var body: some View {
@@ -37,8 +35,6 @@ struct ContentView: View {
 
                         contentPanels
                         actionButtons
-                        historySection
-                        savedSessionsSection
                     }
                     .animation(.spring(response: 0.35, dampingFraction: 0.9), value: viewModel.focusModeEnabled)
                     .padding(.horizontal, 16)
@@ -79,26 +75,7 @@ struct ContentView: View {
             } message: {
                 Text(viewModel.errorMessage ?? "Unknown error")
             }
-            .fileExporter(
-                isPresented: $isExportingTranscript,
-                document: TranscriptDocument(text: viewModel.transcriptExportText),
-                contentType: .plainText,
-                defaultFilename: exportFileName
-            ) { result in
-                switch result {
-                case .success:
-                    break
-                case .failure(let error):
-                    viewModel.errorMessage = error.localizedDescription
-                }
-            }
         }
-    }
-
-    private var exportFileName: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd-HH-mm"
-        return "EchoLingo-Transcript-\(formatter.string(from: Date()))"
     }
 
     private var headerSection: some View {
@@ -185,13 +162,6 @@ struct ContentView: View {
                 .shadow(color: (viewModel.isListening ? Color.red : Color.blue).opacity(0.26), radius: 14, x: 0, y: 10)
             }
             .buttonStyle(.plain)
-
-            if !viewModel.transcriptHistory.isEmpty {
-                Button("Save Current Session") {
-                    viewModel.saveCurrentSession()
-                }
-                .font(.subheadline.weight(.semibold))
-            }
         }
         .padding(18)
         .background(cardBackground)
@@ -273,151 +243,24 @@ struct ContentView: View {
     }
 
     private var actionButtons: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                Button("Clear Session", role: .destructive) {
-                    viewModel.clearSession()
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(Color.red.opacity(0.10))
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-
-                Button("Copy Transcript") {
-                    viewModel.copyTranscript()
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(Color.blue.opacity(0.10))
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        HStack(spacing: 12) {
+            Button("Clear Session", role: .destructive) {
+                viewModel.clearSession()
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(Color.red.opacity(0.10))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
-            HStack(spacing: 12) {
-                ShareLink(item: viewModel.transcriptExportText, subject: Text("EchoLingo Transcript"), message: Text("Shared from EchoLingo")) {
-                    labelButton(title: "Share Transcript", systemImage: "square.and.arrow.up")
-                }
-                .disabled(viewModel.transcriptHistory.isEmpty)
-
-                Button { isExportingTranscript = true } label: {
-                    labelButton(title: "Export .txt", systemImage: "doc.text")
-                }
-                .disabled(viewModel.transcriptHistory.isEmpty)
+            Button("Copy Transcript") {
+                viewModel.copyTranscript()
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(Color.blue.opacity(0.10))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
-    }
-
-    private func labelButton(title: String, systemImage: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: systemImage)
-            Text(title).fontWeight(.semibold)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
-        .background(Color.gray.opacity(0.10))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private var historySection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text("Session History")
-                    .font(.headline)
-                Spacer()
-                Text("\(viewModel.transcriptHistory.count) items")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if viewModel.transcriptHistory.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("No saved transcript yet")
-                        .font(.headline)
-                    Text("Finalized caption segments will appear here after recognition stabilizes.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(18)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(cardBackground)
-            } else {
-                LazyVStack(spacing: 12) {
-                    ForEach(viewModel.transcriptHistory) { segment in
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text(segment.sourceText)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.primary)
-                            Text(segment.translatedText)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                            Text(segment.timestamp.formatted(date: .omitted, time: .shortened))
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-                        .padding(16)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(cardBackground)
-                    }
-                }
-            }
-        }
-    }
-
-    private var savedSessionsSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text("Saved Sessions")
-                    .font(.headline)
-                Spacer()
-                Text("\(viewModel.sessionStore.sessions.count)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if viewModel.sessionStore.sessions.isEmpty {
-                Text("No saved sessions yet. Save a session after recording to keep it locally on this device.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .padding(18)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(cardBackground)
-            } else {
-                LazyVStack(spacing: 12) {
-                    ForEach(viewModel.sessionStore.sessions) { session in
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(session.title)
-                                        .font(.subheadline.weight(.semibold))
-                                    Text(session.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                            }
-
-                            Text("\(session.sourceLanguage) → \(session.targetLanguage) · \(session.items.count) segments")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-
-                            HStack(spacing: 12) {
-                                Button("Load") {
-                                    viewModel.loadSession(session)
-                                }
-                                .font(.subheadline.weight(.semibold))
-
-                                Button("Delete", role: .destructive) {
-                                    viewModel.deleteSavedSession(session)
-                                }
-                                .font(.subheadline.weight(.semibold))
-                            }
-                        }
-                        .padding(16)
-                        .background(cardBackground)
-                    }
-                }
-            }
-        }
     }
 
     private func infoCard(title: String, systemImage: String, tint: Color, text: String, actionTitle: String? = nil, action: (() -> Void)? = nil) -> some View {

@@ -41,7 +41,10 @@ struct AuthService: AuthProviding {
     func signUp(email: String, password: String) async throws -> AuthUser {
         guard SupabaseConfig.isConfigured else { throw AuthError.notConfigured }
         guard password.count >= 8 else { throw AuthError.weakPassword }
-        return try await performAuth(path: "/auth/v1/signup", email: email, password: password)
+
+        let redirect = "echolingo://auth/callback"
+        let path = "/auth/v1/signup?redirect_to=\(redirect.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? redirect)"
+        return try await performAuth(path: path, email: email, password: password)
     }
 
     func signOut() async throws {
