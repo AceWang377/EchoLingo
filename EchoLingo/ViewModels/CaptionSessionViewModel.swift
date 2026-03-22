@@ -39,7 +39,7 @@ final class CaptionSessionViewModel: ObservableObject {
         self.init(
             speechService: SpeechRecognitionService(),
             translationService: TranslationService(),
-            sessionStore: TranscriptSessionStore()
+            sessionStore: .shared
         )
     }
 
@@ -83,6 +83,14 @@ final class CaptionSessionViewModel: ObservableObject {
         captionText = transcriptHistory.last?.sourceText ?? "Waiting for speech..."
         translationText = transcriptHistory.last?.translatedText ?? "Translation will appear here"
         latestStableCaption = normalize(transcriptHistory.first?.sourceText ?? "")
+        translationGuidance = nil
+        permissionGuidance = nil
+    }
+
+    func handlePendingSessionSelection() {
+        if let pending = sessionStore.consumeSelectedSession() {
+            loadSession(pending)
+        }
     }
 
     func deleteSavedSession(_ session: SavedTranscriptSession) {

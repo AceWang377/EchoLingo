@@ -1,8 +1,12 @@
+import Combine
 import Foundation
 
 @MainActor
 final class TranscriptSessionStore: ObservableObject {
+    static let shared = TranscriptSessionStore()
+
     @Published private(set) var sessions: [SavedTranscriptSession] = []
+    @Published var selectedSession: SavedTranscriptSession?
 
     private let storageKey = "echolingo.saved.sessions"
 
@@ -24,6 +28,16 @@ final class TranscriptSessionStore: ObservableObject {
 
         sessions.insert(record, at: 0)
         persist()
+    }
+
+    func selectSession(_ session: SavedTranscriptSession) {
+        selectedSession = session
+    }
+
+    func consumeSelectedSession() -> SavedTranscriptSession? {
+        let session = selectedSession
+        selectedSession = nil
+        return session
     }
 
     func deleteSession(_ session: SavedTranscriptSession) {

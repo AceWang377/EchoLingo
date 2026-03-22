@@ -1,8 +1,14 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var viewModel = CaptionSessionViewModel()
+    @StateObject private var viewModel: CaptionSessionViewModel
     @State private var isShowingSettings = false
+    let onOpenSessionsTab: () -> Void
+
+    init(sessionStore: TranscriptSessionStore = .shared, onOpenSessionsTab: @escaping () -> Void = {}) {
+        _viewModel = StateObject(wrappedValue: CaptionSessionViewModel(sessionStore: sessionStore))
+        self.onOpenSessionsTab = onOpenSessionsTab
+    }
 
     var body: some View {
         NavigationStack {
@@ -66,6 +72,9 @@ struct ContentView: View {
                     translationProvider: $viewModel.translationProvider
                 )
             }
+            .onAppear {
+                viewModel.handlePendingSessionSelection()
+            }
             .alert("Something went wrong", isPresented: Binding(get: {
                 viewModel.errorMessage != nil
             }, set: { newValue in
@@ -89,7 +98,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("EchoLingo")
                     .font(.title2.weight(.bold))
-                Text("Real-time captions and live translation")
+                Text("Designed for work notes, study support, and real-time speech clarity")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
@@ -162,6 +171,20 @@ struct ContentView: View {
                 .shadow(color: (viewModel.isListening ? Color.red : Color.blue).opacity(0.26), radius: 14, x: 0, y: 10)
             }
             .buttonStyle(.plain)
+
+            HStack(spacing: 10) {
+                if !viewModel.transcriptHistory.isEmpty {
+                    Button("Save Current Session") {
+                        viewModel.saveCurrentSession()
+                    }
+                    .font(.subheadline.weight(.semibold))
+                }
+
+                Button("Open Sessions") {
+                    onOpenSessionsTab()
+                }
+                .font(.subheadline.weight(.semibold))
+            }
         }
         .padding(18)
         .background(cardBackground)

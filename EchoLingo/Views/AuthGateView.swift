@@ -84,7 +84,7 @@ struct AuthGateView: View {
                     .disabled(authViewModel.isLoading)
 
                     NavigationLink {
-                        ContentView()
+                        RootTabView()
                     } label: {
                         Text("Continue as Guest")
                             .frame(maxWidth: .infinity)
@@ -99,7 +99,7 @@ struct AuthGateView: View {
             .padding(20)
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationDestination(isPresented: .constant(authViewModel.isSignedIn)) {
-                ContentView()
+                RootTabView()
             }
             .onOpenURL { url in
                 authViewModel.handleIncomingURL(url)
