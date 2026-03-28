@@ -228,6 +228,15 @@ struct ContentView: View {
                     .pickerStyle(.segmented)
                 }
 
+                Button {
+                    let previousSource = viewModel.sourceLanguage
+                    viewModel.sourceLanguage = viewModel.targetLanguage
+                    viewModel.targetLanguage = previousSource
+                } label: {
+                    Label("Swap source and target", systemImage: "arrow.up.arrow.down")
+                        .font(.caption.weight(.semibold))
+                }
+
                 labeledPicker(title: "Target Language") {
                     Picker("Target", selection: $viewModel.targetLanguage) {
                         Text("Chinese").tag("zh-CN")
@@ -245,11 +254,12 @@ struct ContentView: View {
     private var contentPanels: some View {
         VStack(spacing: 14) {
             scrollableTextCard(title: "Live Caption", subtitle: "Incoming speech recognition output", text: viewModel.captionText, accent: .blue)
-            scrollableTextCard(title: "Translated Text", subtitle: viewModel.isTranslating ? "Translation in progress" : "Current translated output", text: viewModel.translationText, accent: .purple)
+            scrollableTextCard(title: "Translated Text", subtitle: viewModel.isTranslating ? "Translation in progress" : "Current translated output", text: viewModel.translationText, accent: .purple, showsLoading: viewModel.isTranslating)
+            translationHistoryCard
         }
     }
 
-    private func scrollableTextCard(title: String, subtitle: String, text: String, accent: Color) -> some View {
+    private func scrollableTextCard(title: String, subtitle: String, text: String, accent: Color, showsLoading: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
@@ -265,16 +275,85 @@ struct ContentView: View {
                     .frame(width: 10, height: 10)
             }
 
-            ScrollView {
-                Text(text)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .font(.body)
-                    .textSelection(.enabled)
-                    .padding(14)
+            ZStack {
+                ScrollView {
+                    Text(text)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .font(.body)
+                        .textSelection(.enabled)
+                        .padding(14)
+                }
+                .frame(minHeight: 120, maxHeight: 220)
+                .background(accent.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+                if showsLoading {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                        Text("Translating...")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Capsule())
+                }
             }
-            .frame(minHeight: 120, maxHeight: 220)
-            .background(accent.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .padding(18)
+        .background(cardBackground)
+    }
+
+
+
+    private var translationHistoryCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Recent Translation History")
+                    .font(.headline)
+                Spacer()
+                Text("\(viewModel.transcriptHistory.count) items")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if viewModel.transcriptHistory.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "text.bubble")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                    Text("No translated segments yet")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Start listening and final segments will appear here.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+                .background(Color.secondary.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(Array(viewModel.transcriptHistory.prefix(6))) { segment in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(segment.sourceText)
+                                .font(.subheadline.weight(.semibold))
+                                .lineLimit(2)
+                            Text(segment.translatedText)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                            Text(segment.timestamp.formatted(date: .omitted, time: .shortened))
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(Color.secondary.opacity(0.07))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                }
+            }
         }
         .padding(18)
         .background(cardBackground)
@@ -333,12 +412,28 @@ struct ContentView: View {
     }
 
     private var cardBackground: some View {
+        SWGlassCardBackground()
+    }
+}
+
+private struct SWGlassCardBackground: View {
+    var body: some View {
         RoundedRectangle(cornerRadius: 24, style: .continuous)
-            .fill(.ultraThinMaterial)
+            .fill(
+                LinearGradient(
+                    colors: [Color.white.opacity(0.78), Color.white.opacity(0.58)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(.ultraThinMaterial)
+            )
             .overlay(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(Color.white.opacity(0.4), lineWidth: 1)
+                    .stroke(Color.white.opacity(0.55), lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.05), radius: 12, x: 0, y: 6)
+            .shadow(color: .black.opacity(0.06), radius: 14, x: 0, y: 8)
     }
 }
